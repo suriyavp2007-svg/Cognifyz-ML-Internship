@@ -1,0 +1,98 @@
+======================================================================
+STEP 1: PREPROCESSING
+======================================================================
+Original shape: (9551, 21)
+
+Missing values before cleaning:
+Cuisines    9
+dtype: int64
+
+Missing values after cleaning: 0
+Removed 93 duplicate rows -> 9458 rows remain
+
+Sample of cleaned data:
+          Restaurant Name              City                          Cuisines  Price range  Aggregate rating  Votes
+0        Le Petit Souffle       Makati City        French, Japanese, Desserts            3               4.8    314
+1        Izakaya Kikufuji       Makati City                          Japanese            3               4.5    591
+2  Heat - Edsa Shangri-La  Mandaluyong City  Seafood, Asian, Filipino, Indian            4               4.4    270
+3                    Ooma  Mandaluyong City                   Japanese, Sushi            4               4.9    365
+4             Sambo Kojin  Mandaluyong City                  Japanese, Korean            4               4.8    229
+
+======================================================================
+STEP 2: RECOMMENDATION CRITERIA
+======================================================================
+
+A restaurant's "content profile" is built from:
+  1. Cuisines        -> TF-IDF vector (captures cuisine similarity, e.g.
+                          'North Indian, Chinese' is close to 'Chinese, Thai')
+  2. Price range      -> normalized numeric (1=cheap ... 4=expensive)
+  3. Aggregate rating  -> normalized numeric (quality signal)
+
+User preferences (query) are expressed the same way:
+  - preferred cuisines (free text, e.g. "Italian, Pizza")
+  - preferred price range (1-4)
+  - City (optional filter)
+  - minimum rating (optional filter)
+
+======================================================================
+STEP 3: BUILDING CONTENT-BASED MODEL
+======================================================================
+Cuisine TF-IDF matrix shape: (9458, 250)
+Combined feature matrix shape: (9458, 252)
+
+======================================================================
+STEP 4: TESTING THE RECOMMENDATION SYSTEM
+======================================================================
+
+----------------------------------------------------------------------
+User 1: wants North Indian food, mid-range price, in New Delhi
+Preferences: {'cuisine_pref': 'North Indian', 'price_range': 2, 'city': 'New Delhi', 'top_n': 5}
+ Restaurant Name      City     Cuisines  Price range  Aggregate rating  Votes  similarity_score
+    Satvik Rasoi New Delhi North Indian            2               3.8     31          0.999933
+         Kamal's New Delhi North Indian            2               3.7    286          0.999850
+      Prem Dhaba New Delhi North Indian            2               3.7    177          0.999850
+          Chowki New Delhi North Indian            2               3.7     89          0.999850
+Anand Restaurant New Delhi North Indian            2               3.6    485          0.999733
+
+----------------------------------------------------------------------
+User 2: wants Italian/Pizza, no city restriction, any price
+Preferences: {'cuisine_pref': 'Italian, Pizza', 'top_n': 5}
+Restaurant Name      City       Cuisines  Price range  Aggregate rating  Votes  similarity_score
+        NYC.PIE New Delhi Italian, Pizza            2               3.8    306          0.999933
+     Play Pizza New Delhi Italian, Pizza            2               3.8    270          0.999933
+      Pizza Hut      Agra Italian, Pizza            2               4.4    134          0.999738
+   Crust Bistro   Gurgaon Italian, Pizza            2               3.6    144          0.999733
+ Shot Tower Inn   Dubuque Italian, Pizza            2               3.6    131          0.999733
+
+----------------------------------------------------------------------
+User 3: wants Chinese food, low budget (price range 1), rating >= 4.0
+Preferences: {'cuisine_pref': 'Chinese', 'price_range': 1, 'min_rating': 4.0, 'top_n': 5}
+     Restaurant Name                   City                         Cuisines  Price range  Aggregate rating  Votes  similarity_score
+    Tsing Tsao South             Des Moines                          Chinese            1               4.1    218          0.999983
+  Ting's Red Lantern Cedar Rapids/Iowa City                          Chinese            1               4.2    347          0.999934
+           Kennedy's              New Delhi               Chinese, Fast Food            1               4.1    491          0.766654
+BMG - All Day Dining               Dehradun Chinese, North Indian, Fast Food            1               4.3     63          0.632679
+       Drifters Cafe                Gurgaon             Chinese, Thai, Asian            1               4.1    208          0.469673
+
+----------------------------------------------------------------------
+User 4: wants Japanese/Sushi, high-end (price range 4)
+Preferences: {'cuisine_pref': 'Japanese, Sushi', 'price_range': 4, 'top_n': 5}
+                         Restaurant Name      City        Cuisines  Price range  Aggregate rating  Votes  similarity_score
+                                   Guppy New Delhi Japanese, Sushi            4               4.1    665          0.999985
+Wasabi by Morimoto - The Taj Mahal Hotel New Delhi Japanese, Sushi            4               3.9    183          0.999985
+                 MEGU - The Leela Palace New Delhi Japanese, Sushi            4               3.9    178          0.999985
+                                   Nagai   Gurgaon Japanese, Sushi            4               4.3     56          0.999862
+                                    Nobu    London Japanese, Sushi            4               4.4    311          0.999755
+
+======================================================================
+STEP 5: EVALUATION
+======================================================================
+
+Relevance check (does the recommended cuisine actually match the ask?):
+  Query='North Indian   '  cuisine-match precision@10 = 1.00   avg similarity = 1.000
+  Query='Italian        '  cuisine-match precision@10 = 1.00   avg similarity = 1.000
+  Query='Chinese        '  cuisine-match precision@10 = 1.00   avg similarity = 1.000
+  Query='Japanese       '  cuisine-match precision@10 = 1.00   avg similarity = 0.995
+  Query='Mexican        '  cuisine-match precision@10 = 1.00   avg similarity = 0.999
+
+Done.
